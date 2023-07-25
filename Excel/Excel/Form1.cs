@@ -76,6 +76,7 @@ namespace Excel
                 // close Excel
                 wb.Close(true);
                 excelApp.Quit();
+                textBox1.Text = Text + "test";
 
             }
             catch (Exception ex)
