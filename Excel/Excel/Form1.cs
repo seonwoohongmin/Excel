@@ -18,10 +18,12 @@ namespace Excel
         static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
         #endregion
 
-        string server = @"DESKTOP-8HL44SC\SQLEXPRESS"; // 서버주소 -- sql 서버 접속시 사용한 주소
-        string database = "TESTDB"; // 사용할 DATABASE 이름
-        string uid = "testid"; // DB 접속 아이디
-        string password = "1234"; // DB 접속 비밀번호
+        #region DB Connection variables
+        string strServer = @"DESKTOP-8HL44SC\SQLEXPRESS"; // 서버주소 -- sql 서버 접속시 사용한 주소
+        string strDatabase = "TESTDB"; // 사용할 DATABASE 이름
+        string strUid = "testid"; // DB 접속 아이디
+        string strPassword = "1234"; // DB 접속 비밀번호
+        #endregion
 
         public Form1()
         {
@@ -31,7 +33,6 @@ namespace Excel
         private void Form1_Load(object sender, EventArgs e)
         {
             #region excel
-            #region comment
             List<string> testData = new List<string>()
             { "Excel", "Access", "Word", "OnceNote"};
 
@@ -40,13 +41,14 @@ namespace Excel
             Workbook wb = null;
             Worksheet ws = null;
 
-            String filePath = null;
-            String data = null;
+            String strFilePath = null;
             uint processId = 0;
+
+            DataGridViewCheckBoxColumn checkcolumn = new DataGridViewCheckBoxColumn();
 
             try
             {
-                filePath = @"C:\Users\Hongmin\Desktop/test.xls"; // xls
+                strFilePath = @"C:\Users\Hongmin\Desktop/test.xls"; // xls
                 //filePath = @"C:\Users\Hongmin\Desktop/Test.xlsx";
                 #region test Data Input
                 //// Excel get the first worksheet
@@ -88,7 +90,7 @@ namespace Excel
                 #endregion
 
                 excelApp = new Microsoft.Office.Interop.Excel.Application();                // 엑셀 어플리케이션 생성
-                wb = excelApp.Workbooks.Open(Filename: @filePath);                          // 워크북 열기
+                wb = excelApp.Workbooks.Open(Filename: @strFilePath);                          // 워크북 열기
                 ws = wb.Worksheets.get_Item(1) as Microsoft.Office.Interop.Excel.Worksheet; // 엑셀 첫번째 워크시트 가져오기
 
                 Range range = ws.UsedRange;    // 사용중인 셀 범위를 가져오기
@@ -112,7 +114,12 @@ namespace Excel
 
                 for (int column = 0; column < columnCount; ++column) //dgv 컬럼 헤더이름 넣어주기
                 {
+
+                    if ("부가세포함" == Griddata[1, column + 1].ToString())
+                        dataGridView1.Columns.Insert(column, checkcolumn);
+
                     dataGridView1.Columns[column].HeaderText = Griddata[1, column + 1].ToString();
+
                 }
 
                 for (int row = 0; row < rowCount; ++row) //내용 채우기
@@ -150,44 +157,43 @@ namespace Excel
 
             }
             #endregion
-            #endregion
 
             #region DB
-            string connectString = string.Format("Server={0};Database={1};Uid ={2};Pwd={3};", server, database, uid, password);
-            //string connectString = "Data Source = (local); Initial Catalog = pubs; Connection Timeout=5;Integrated Security = SSPI"; // Windows 인증
+            //string strConnectString = string.Format("Server={0};Database={1};Uid ={2};Pwd={3};", strServer, strDatabase, strUid, strPassword);
+            ////string connectString = "Data Source = (local); Initial Catalog = pubs; Connection Timeout=5;Integrated Security = SSPI"; // Windows 인증
 
-            SqlConnection conn = new SqlConnection(connectString);
-            SqlCommand cmd = new SqlCommand();
-            string strColumnName = string.Empty;
+            //SqlConnection conn = new SqlConnection(strConnectString);
+            //SqlCommand cmd = new SqlCommand();
+            //string strColumnName = string.Empty;
 
-            System.Data.DataTable dtSource = new System.Data.DataTable();
+            //System.Data.DataTable dtSource = new System.Data.DataTable();
 
-            try
-            {
+            //try
+            //{
 
-                #region DB
-                DBConnection(conn);
-                dtSource = GetDataTableFromDGV(dataGridView1);
+            //    #region DB
+            //    DBConnection(conn);
+            //    dtSource = GetDataTableFromDGV(dataGridView1);
 
-                if (dtSource != null)
-                {
-                    using (var bulk = new SqlBulkCopy(conn))
-                    {
-                        bulk.DestinationTableName = "TESTTABLE";
-                        bulk.WriteToServer(dtSource);
-                    }
-                }
-               
-                #endregion
-            }
-            catch (Exception ex)
-            {
+            //    if (dtSource != null)
+            //    {
+            //        using (var bulk = new SqlBulkCopy(conn))
+            //        {
+            //            bulk.DestinationTableName = "TESTTABLE";
+            //            bulk.WriteToServer(dtSource);
+            //        }
+            //    }
 
-            }
-            finally
-            {
-                DBClosed(conn);
-            }
+            //#endregion
+            //}
+            //catch (Exception ex)
+            //{
+
+            //}
+            //finally
+            //{
+            //    DBClosed(conn);
+            //}
             #endregion
 
 
@@ -202,7 +208,6 @@ namespace Excel
                 {
                     dt.Columns.Add(column.HeaderText);
                 }
-
 
                 object[] cellValues = new object[dgv.Columns.Count];
                 foreach (DataGridViewRow row in dgv.Rows)
@@ -221,8 +226,6 @@ namespace Excel
             {
                 return null;
             }
-
-
         }
 
         public void DBConnection(SqlConnection conn)
