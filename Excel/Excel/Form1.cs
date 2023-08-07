@@ -18,8 +18,15 @@ namespace Excel
         static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
         #endregion
 
-        #region DB Connection variables
-        string strServer = @"DESKTOP-8HL44SC\SQLEXPRESS"; // 서버주소 -- sql 서버 접속시 사용한 주소
+        #region DB Connection variables desktop
+        //string strServer = @"DESKTOP-8HL44SC\SQLEXPRESS"; // 서버주소 -- sql 서버 접속시 사용한 주소
+        //string strDatabase = "TESTDB"; // 사용할 DATABASE 이름
+        //string strUid = "testid"; // DB 접속 아이디
+        //string strPassword = "1234"; // DB 접속 비밀번호
+        #endregion
+
+        #region DB Connection variables Surface
+        string strServer = @"DESKTOP-9J5VP01\HONGMIN"; // 서버주소 -- sql 서버 접속시 사용한 주소
         string strDatabase = "TESTDB"; // 사용할 DATABASE 이름
         string strUid = "testid"; // DB 접속 아이디
         string strPassword = "1234"; // DB 접속 비밀번호
@@ -45,10 +52,17 @@ namespace Excel
             uint processId = 0;
 
             DataGridViewCheckBoxColumn checkcolumn = new DataGridViewCheckBoxColumn();
+            OpenFileDialog ofdfilepath = new OpenFileDialog();
 
             try
             {
-                strFilePath = @"C:\Users\Hongmin\Desktop/test.xls"; // xls
+
+                ofdfilepath.InitialDirectory = @"C:\Users\Hongmin\Desktop";
+                if (ofdfilepath.ShowDialog() == DialogResult.OK)
+                {
+                    strFilePath = ofdfilepath.FileName;
+                }
+                //strFilePath = @"C:\Users\Hongmin\Desktop/test.xls"; // xls
                 //filePath = @"C:\Users\Hongmin\Desktop/Test.xlsx";
                 #region test Data Input
                 //// Excel get the first worksheet
@@ -67,13 +81,13 @@ namespace Excel
                 //    c++;
                 //}
 
-                //if (File.Exists(filePath))
-                //    File.Delete(filePath);
+                //if (File.Exists(strFilePath))
+                //    File.Delete(strFilePath);
 
                 ////wb.SaveAs(filePath);
-                //wb.SaveAs(filePath, Microsoft.Office.Interop.Excel.XlFileFormat.xlWorkbookNormal);
+                //wb.SaveAs(strFilePath, Microsoft.Office.Interop.Excel.XlFileFormat.xlWorkbookNormal);
 
-                //wb = excelApp.Workbooks.Open(Filename: @filePath);
+                //wb = excelApp.Workbooks.Open(Filename: strFilePath);
                 //excelApp.Visible = false;
 
                 //Range range = ws.UsedRange;
@@ -109,20 +123,18 @@ namespace Excel
 
                 if (dataGridView1.ColumnCount < columnCount)
                 {
-                    dataGridView1.ColumnCount = columnCount;
+                    dataGridView1.ColumnCount = columnCount - 1;
                 }
 
                 for (int column = 0; column < columnCount; ++column) //dgv 컬럼 헤더이름 넣어주기
                 {
-
                     if ("부가세포함" == Griddata[1, column + 1].ToString())
                         dataGridView1.Columns.Insert(column, checkcolumn);
 
                     dataGridView1.Columns[column].HeaderText = Griddata[1, column + 1].ToString();
-
                 }
 
-                for (int row = 0; row < rowCount; ++row) //내용 채우기
+                for (int row = 0; row < rowCount; ++row) //내용 채우기 //rowCount -1 because headername
                 {
                     for (int column = 0; column < columnCount; ++column)
                     {
@@ -159,41 +171,41 @@ namespace Excel
             #endregion
 
             #region DB
-            //string strConnectString = string.Format("Server={0};Database={1};Uid ={2};Pwd={3};", strServer, strDatabase, strUid, strPassword);
-            ////string connectString = "Data Source = (local); Initial Catalog = pubs; Connection Timeout=5;Integrated Security = SSPI"; // Windows 인증
+            string strConnectString = string.Format("Server={0};Database={1};Uid ={2};Pwd={3};", strServer, strDatabase, strUid, strPassword);
+            //string connectString = "Data Source = (local); Initial Catalog = pubs; Connection Timeout=5;Integrated Security = SSPI"; // Windows 인증
 
-            //SqlConnection conn = new SqlConnection(strConnectString);
-            //SqlCommand cmd = new SqlCommand();
-            //string strColumnName = string.Empty;
+            SqlConnection conn = new SqlConnection(strConnectString);
+            SqlCommand cmd = new SqlCommand();
+            string strColumnName = string.Empty;
 
-            //System.Data.DataTable dtSource = new System.Data.DataTable();
+            System.Data.DataTable dtSource = new System.Data.DataTable();
 
-            //try
-            //{
+            try
+            {
 
-            //    #region DB
-            //    DBConnection(conn);
-            //    dtSource = GetDataTableFromDGV(dataGridView1);
+                #region DB
+                DBConnection(conn);
+                dtSource = GetDataTableFromDGV(dataGridView1);
 
-            //    if (dtSource != null)
-            //    {
-            //        using (var bulk = new SqlBulkCopy(conn))
-            //        {
-            //            bulk.DestinationTableName = "TESTTABLE";
-            //            bulk.WriteToServer(dtSource);
-            //        }
-            //    }
+                if (dtSource != null)
+                {
+                    using (var bulk = new SqlBulkCopy(conn))
+                    {
+                        bulk.DestinationTableName = "TESTTABLE";
+                        bulk.WriteToServer(dtSource);
+                    }
+                }
 
-            //#endregion
-            //}
-            //catch (Exception ex)
-            //{
-
-            //}
-            //finally
-            //{
-            //    DBClosed(conn);
-            //}
+                #endregion
+            }
+            catch (Exception ex)
+            {
+                throw;
+            }
+            finally
+            {
+                DBClosed(conn);
+            }
             #endregion
 
 
