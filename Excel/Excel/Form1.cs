@@ -8,6 +8,8 @@ using System.IO;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
+using iTextSharp.text.pdf;
+using iTextSharp.text;
 
 namespace Excel
 {
@@ -116,19 +118,19 @@ namespace Excel
 
                 object[,] Griddata = range.Value;
 
-                int rowCount = Griddata.GetLength(0);
-                int columnCount = Griddata.GetLength(1);
+                int rowCount = Griddata.GetLength(0) - 1; // -1 because checkcolumn
+                int columnCount = Griddata.GetLength(1) - 1; //-1 because headername
 
                 //엑셀 크기보다 dataGirdView가 작다면 넓혀준다.
 
                 if (dataGridView1.RowCount < rowCount)
                 {
-                    dataGridView1.RowCount = rowCount - 1;
+                    dataGridView1.RowCount = rowCount;
                 }
 
                 if (dataGridView1.ColumnCount < columnCount)
                 {
-                    dataGridView1.ColumnCount = columnCount - 1;
+                    dataGridView1.ColumnCount = columnCount;
                 }
 
                 for (int column = 0; column < columnCount; ++column) //dgv 컬럼 헤더이름 넣어주기
@@ -150,12 +152,75 @@ namespace Excel
                     dataGridView1.Columns[column].HeaderText = Griddata[1, column + 1].ToString();
                 }
 
-                for (int row = 0; row < rowCount; ++row) //내용 채우기 //rowCount -1 because headername
+                for (int row = 0; row < rowCount; ++row) 
                 {
                     for (int column = 0; column < columnCount; ++column)
                     {
                         dataGridView1[column, row].Value = Griddata[row + 2, column + 1];
                     }
+                }
+
+                if (dataGridView1.Rows.Count > 0)
+                {
+                    SaveFileDialog save = new SaveFileDialog();
+                    save.Filter = "PDF (*.pdf)|*.pdf";
+                    save.FileName = "dgv.pdf";
+                    bool ErrorMessage = false;
+                    if (save.ShowDialog() == DialogResult.OK)
+                    {
+                        if (File.Exists(save.FileName))
+                        {
+                            try
+                            {
+                                File.Delete(save.FileName);
+                            }
+                            catch (Exception ex)
+                            {
+                                ErrorMessage = true;
+                                MessageBox.Show("Unable to wride data in disk" + ex.Message);
+                            }
+                        }
+                        if (!ErrorMessage)
+                        {
+                            try
+                            {
+                                PdfPTable pTable = new PdfPTable(dataGridView1.Columns.Count);
+                                pTable.DefaultCell.Padding = 2;
+                                pTable.WidthPercentage = 100;
+                                pTable.HorizontalAlignment = Element.ALIGN_LEFT;
+                                foreach (DataGridViewColumn col in dataGridView1.Columns)
+                                {
+                                    PdfPCell pCell = new PdfPCell(new Phrase(col.HeaderText));
+                                    pTable.AddCell(pCell);
+                                }
+                                foreach (DataGridViewRow viewRow in dataGridView1.Rows)
+                                {
+                                    foreach (DataGridViewCell dcell in viewRow.Cells)
+                                    {
+                                        pTable.AddCell(dcell.Value.ToString());
+                                    }
+                                }
+                                using (FileStream fileStream = new FileStream(save.FileName, FileMode.Create))
+                                {
+                                    Document document = new Document(PageSize.A4, 8f, 16f, 16f, 8f);
+                                    PdfWriter.GetInstance(document, fileStream);
+                                    document.Open();
+                                    document.Add(pTable);
+                                    document.Close();
+                                    fileStream.Close();
+                                }
+                                MessageBox.Show("Data Export Successfully", "info");
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show("Error while exporting Data" + ex.Message);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("No Record Found", "Info");
                 }
             }
             catch (Exception ex)
@@ -262,12 +327,10 @@ namespace Excel
                 if (conn.State != System.Data.ConnectionState.Open)
                 {
                     conn.Open();
-                    tbDBStatus.Text = "Open";
                 }
             }
             catch (Exception ex)
             {
-                tbDBStatus.Text = "Open Failure";
             }
         }
 
@@ -276,7 +339,6 @@ namespace Excel
             if (conn.State == System.Data.ConnectionState.Open)
             {
                 conn.Close();
-                tbDBStatus.Text = "Close";
             }
         }
 
