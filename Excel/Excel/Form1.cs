@@ -64,6 +64,7 @@ namespace Excel
             {
 
                 ofdfilepath.InitialDirectory = @"C:\Users\Hongmin\Desktop";
+                ofdfilepath.Filter = "엑셀 파일 (*.xls)|*.xls";
                 if (ofdfilepath.ShowDialog() == DialogResult.OK)
                 {
                     strFilePath = ofdfilepath.FileName;
@@ -152,7 +153,7 @@ namespace Excel
                     dataGridView1.Columns[column].HeaderText = Griddata[1, column + 1].ToString();
                 }
 
-                for (int row = 0; row < rowCount; ++row) 
+                for (int row = 0; row < rowCount; ++row)
                 {
                     for (int column = 0; column < columnCount; ++column)
                     {
@@ -197,7 +198,8 @@ namespace Excel
                                 {
                                     foreach (DataGridViewCell dcell in viewRow.Cells)
                                     {
-                                        pTable.AddCell(dcell.Value.ToString());
+                                        if (dcell.Value != null)
+                                            pTable.AddCell(dcell.Value.ToString());
                                     }
                                 }
                                 using (FileStream fileStream = new FileStream(save.FileName, FileMode.Create))
