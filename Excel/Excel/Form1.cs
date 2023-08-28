@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Web;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Windows.Forms;
@@ -8,8 +9,16 @@ using System.IO;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
-using iTextSharp.text.pdf;
 using iTextSharp.text;
+using iTextSharp.text.pdf;
+using iTextSharp.tool.xml;
+using iTextSharp.tool.xml.html;
+using iTextSharp.tool.xml.pipeline.css;
+using iTextSharp.tool.xml.css;
+using iTextSharp.tool.xml.pipeline.html;
+using iTextSharp.tool.xml.pipeline.end;
+using iTextSharp.tool.xml.parser;
+using System.Text;
 
 namespace Excel
 {
@@ -178,7 +187,6 @@ namespace Excel
                             catch (Exception ex)
                             {
                                 ErrorMessage = true;
-                                MessageBox.Show("Unable to wride data in disk" + ex.Message);
                             }
                         }
                         if (!ErrorMessage)
@@ -189,6 +197,7 @@ namespace Excel
                                 pTable.DefaultCell.Padding = 2;
                                 pTable.WidthPercentage = 100;
                                 pTable.HorizontalAlignment = Element.ALIGN_LEFT;
+
                                 foreach (DataGridViewColumn col in dataGridView1.Columns)
                                 {
                                     PdfPCell pCell = new PdfPCell(new Phrase(col.HeaderText));
@@ -200,29 +209,80 @@ namespace Excel
                                     {
                                         if (dcell.Value != null)
                                             pTable.AddCell(dcell.Value.ToString());
+                                        else
+                                            pTable.AddCell("");
                                     }
+
                                 }
+
+                                //HTML 형식의 String 데이터
+                                var html = @"
+<html>
+    <head></head>
+    <body>
+        <div>Hello world</div>
+        <div>명월입니다.</div>
+    </body>
+</html>
+            ";
+
                                 using (FileStream fileStream = new FileStream(save.FileName, FileMode.Create))
                                 {
                                     Document document = new Document(PageSize.A4, 8f, 16f, 16f, 8f);
-                                    PdfWriter.GetInstance(document, fileStream);
+                                    //PdfWriter.GetInstance(document, fileStream);
+                                    PdfWriter writer = PdfWriter.GetInstance(document, fileStream);
+
                                     document.Open();
-                                    document.Add(pTable);
+
+
+                                    var helper = XMLWorkerHelper.GetInstance();
+                                    var cssResolver = new StyleAttrCSSResolver();
+
+                                    // Css 파일 설정
+                                    using (var cssStream = new FileStream(Environment.CurrentDirectory + "/css1.css", FileMode.Open, FileAccess.Read))
+                                    {
+                                        cssResolver.AddCss(XMLWorkerHelper.GetCSS(cssStream));
+                                    }
+                                    using (var cssStream = new FileStream(Environment.CurrentDirectory + "/css2.css", FileMode.Open, FileAccess.Read))
+                                    {
+                                        cssResolver.AddCss(XMLWorkerHelper.GetCSS(cssStream));
+                                    }
+
+
+                                    // 폰트 설정
+                                    var font = new XMLWorkerFontProvider(XMLWorkerFontProvider.DONTLOOKFORFONTS);
+                                    //font.Register(Environment.CurrentDirectory + "/malgun.ttf", "MalgunGothic");
+                                    font.Register(@"c:/windows/fonts/malgun.ttf", "MalgunGothic");
+                                    var cssAppliers = new CssAppliersImpl(font);
+
+                                    //htmlContext 생성
+                                    var htmlContext = new HtmlPipelineContext(cssAppliers);
+                                    htmlContext.SetTagFactory(Tags.GetHtmlTagProcessorFactory());
+
+                                    //pipeline 생성.
+                                    var pdfPipeline = new PdfWriterPipeline(document, writer);
+                                    var htmlPipeline = new HtmlPipeline(htmlContext, pdfPipeline);
+                                    var cssResolverPipeline = new CssResolverPipeline(cssResolver, htmlPipeline);
+
+                                    //Work 생성 pipeline 연결
+                                    var worker = new XMLWorker(cssResolverPipeline, true);
+                                    //Xml파서 생성(Html -> 변환)
+                                    var xmlParser = new XMLParser(true, worker, Encoding.GetEncoding("UTF-8"));
+                                    using (StringReader strReader = new StringReader(html))
+                                    {
+                                        xmlParser.Parse(strReader);
+                                    }
+
+                                    //document.Add(pTable);
                                     document.Close();
                                     fileStream.Close();
                                 }
-                                MessageBox.Show("Data Export Successfully", "info");
                             }
                             catch (Exception ex)
                             {
-                                MessageBox.Show("Error while exporting Data" + ex.Message);
                             }
                         }
                     }
-                }
-                else
-                {
-                    MessageBox.Show("No Record Found", "Info");
                 }
             }
             catch (Exception ex)
@@ -253,7 +313,7 @@ namespace Excel
             }
             #endregion
 
-            #region DB
+            #region Database
             //string strConnectString = string.Format("Server={0};Database={1};Uid ={2};Pwd={3};", strServer, strDatabase, strUid, strPassword);
             ////string connectString = "Data Source = (local); Initial Catalog = pubs; Connection Timeout=5;Integrated Security = SSPI"; // Windows 인증
 
